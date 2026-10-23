@@ -171,4 +171,4 @@ Projet réalisé dans le cadre du cours d'automatisation M1
 ---
 
 **Version** : 1.0.0-MVP  
-**Dernière mise à jour** : 2026-10-22
+**Dernière mise à jour** : 2026-10-23
