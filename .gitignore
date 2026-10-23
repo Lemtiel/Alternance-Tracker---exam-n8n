@@ -1,0 +1,38 @@
+# n8n
+n8n-cli.json
+.n8n/
+*.backup.json
+
+# Secrets & Credentials
+.env
+*.key
+credentials/
+secrets/
+config/config.json
+
+# Test data (real)
+test-data/real/
+fixtures/real/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+!schemas/*.sql
