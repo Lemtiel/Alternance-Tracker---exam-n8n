@@ -1,44 +1,21 @@
+# Le dépôt public ne contient que les livrables.
+# Tout le reste (sources locales, docs de travail, fixtures, scripts, config n8n) reste hors du dépôt.
+*
+!*/
+!.gitignore
+!README.md
 
-# n8n
-n8n-cli.json
-.n8n/
-*.backup.json
+# Livrables
+!Workflow/
+!Workflow/**
+!Skills/
+!Skills/**
+!Vidéo/
+!Vidéo/**
 
-# Secrets & Credentials
+# Sécurité : jamais de secrets, même si une règle ci-dessus les laissait passer
 .env
 *.key
 credentials/
 secrets/
-config/config.json
-
-# Test data (real)
-test-data/real/
-fixtures/real/
-
-# Logs
-*.log
-logs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Temporary
-tmp/
-temp/
-*.tmp
-
-# Database
-*.db
-*.db-shm
-*.db-wal
-
-# n8ncli ignored files
-n8n/config/sync-state.json
-n8n/config/unconfigured-credentials.json
-n8n/config/workflow-folders.json
-n8n/references/
+n8n-cli.json

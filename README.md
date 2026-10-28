@@ -65,7 +65,7 @@ Tant que ces trois points ne sont pas faits, laisser le workflow **inactif** : l
 ## Architecture
 
 - **n8n** : `2.44.5`, épinglé dans `compose.yaml`, port limité à `127.0.0.1:5678`
-- **Stockage** : Google Sheets (6 onglets), voir `docs/GOOGLE_SHEETS_SETUP.md`
+- **Stockage** : Google Sheets, 6 onglets : `Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`
 - **Modèle** : `models/gemini-flash-lite-latest`
 - **Offres (Auto)** : API publique Adzuna, remplaçable dans le nœud `Fetch Offers`
 - **Journal d'audit** : historique d'exécution n8n
@@ -86,7 +86,7 @@ n8ncli env test local
 n8ncli validate "n8n/workflows/Alternance Tracker.workflow.ts" --lint
 ```
 
-Puis suivre `QUICKSTART.md` (tableur, parcours de test).
+Puis renseigner l'identifiant du tableur dans le nœud `Settings` du workflow MVP.
 
 ### Déploiement des workflows
 
@@ -104,14 +104,18 @@ Les exports prêts à importer (n8n → *Import from file*) sont versionnés dan
 
 Ils contiennent les identifiants de credentials de cette instance, jamais de secret : après import sur une autre instance, il suffit de resélectionner les credentials.
 
-## Documentation
+## Contenu du dépôt
 
-- `QUICKSTART.md` - mise en route en 15 minutes
-- `docs/STATUS.md` - état d'avancement, décisions, limites
-- `docs/GOOGLE_SHEETS_SETUP.md` - onglets et en-têtes exacts
-- `docs/ARCHITECTURE.md` - modèle de données et cycle de vie
-- `docs/DECISION-STORAGE.md` - pourquoi Google Sheets
-- `TODO.md` - reste à faire
+Le dépôt public ne publie que les livrables :
+
+| Élément | Contenu |
+|---|---|
+| `README.md` | Ce document |
+| `Workflow/` | Les exports JSON importables des deux workflows |
+| `Skills/` | Les trois skills utilisés pour concevoir et relire le projet (`interview`, `hostile-review`, `doubt-driven-dev`) |
+| `Vidéo/` | Emplacement de la vidéo de présentation |
+
+Les documents de travail (guide de démarrage, état d'avancement, schéma du tableur, fixtures, scripts, sources `n8n/`) restent sur le poste et ne sont pas versionnés.
 
 ## Règles importantes
 
@@ -127,7 +131,7 @@ n8ncli validate "n8n/workflows/Alternance Tracker.workflow.ts" --lint
 n8ncli validate "n8n/workflows/Alternance Tracker Auto.workflow.ts" --lint
 ```
 
-Les fixtures de `fixtures/` servent aux tests manuels décrits dans `TODO.md`.
+Les fixtures locales (`fixtures/`) servent aux tests manuels.
 
-Le parcours complet du MVP a été exécuté sur l'instance locale (voir `docs/STATUS.md`).
+Le parcours complet du MVP a été exécuté sur l'instance locale.
 Pour le workflow Auto, la logique des nœuds Code (sélection du CV, normalisation des offres, déduplication, construction et validation du brouillon) est couverte par un harnais local ; le parcours réseau reste à valider après connexion des credentials Drive et Adzuna.
