@@ -10,7 +10,7 @@ Système d'accompagnement à la recherche d'alternance, construit sur n8n, autou
 
 **Un seul workflow n8n** : `Alternance Tracker`, 27 nœuds, 6 branches derrière un formulaire unique.
 Identifiant n8n : `HlVcM1JUEF5DJf90`.
-Source : `n8n/workflows/Alternance Tracker.workflow.ts`.
+Export importable : `Workflow/Alternance Tracker.workflow.json`.
 
 | Action | Rôle |
 |---|---|
@@ -30,7 +30,7 @@ Chaque prompt suit le format XML imposé : `<role>`, `<instructions>` (`<goal>`,
 
 **`Alternance Tracker Auto`** : 17 nœuds, 4 groupes, aucun formulaire à remplir à chaque exécution.
 Identifiant n8n : `famUstqu1tAcM0Lf`.
-Source : `n8n/workflows/Alternance Tracker Auto.workflow.ts`.
+Export importable : `Workflow/Alternance Tracker Auto.workflow.json`.
 
 Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workflows alimentent un seul suivi.
 
@@ -47,7 +47,7 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 | `keywords`, `location`, `countryCode` | Requête et pays envoyés à l'API |
 | `maxOffers` | Nombre maximum d'offres traitées par jour, donc plafond de coût |
 | `maxDaysOld` | Ancienneté maximale des offres |
-| `cvFolderId` | Dossier Google Drive qui contient le CV |
+| `cvFolderId` | Dossier Google Drive du CV ; facultatif, sinon recherche par nom |
 | `spreadsheetId`, `userId` | Tableur cible et identifiant de profil |
 
 **Coût** : 1 appel Gemini pour le CV + 1 appel par nouvelle offre, jamais plus de `maxOffers` par jour.
@@ -83,45 +83,27 @@ Tant que le point 3 n'est pas fait, laisser le workflow **inactif** : le déclen
 
 ## Architecture
 
-- **n8n** : `2.44.5`, épinglé dans `compose.yaml`, port limité à `127.0.0.1:5678`
+- **n8n** : `2.44.5`, instance locale sur `127.0.0.1:5678`
 - **Stockage** : Google Sheets, 6 onglets : `Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`
 - **Modèle** : `models/gemini-flash-lite-latest`
 - **Offres (Auto)** : API publique Adzuna, remplaçable dans le nœud `Fetch Offers`
 - **Journal d'audit** : historique d'exécution n8n
 
-Le schéma SQL de `schemas/v1_initial.sql` reste la référence pour une migration future vers une base relationnelle.
+Une migration future vers une base relationnelle reste possible ; pour le MVP, les six onglets sont la référence.
 
 ## Installation
 
 ### Prérequis
-- Docker et Docker Compose
-- n8ncli `1.2.45+`
+- Une instance n8n `2.44.5` ou plus récente
+- Un tableur Google Sheets avec les six onglets (`Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`)
+- Les credentials Gemini, Google Sheets et Google Drive
 
-### Démarrage
+### Import
 
-```powershell
-docker compose up -d
-n8ncli env test local
-n8ncli validate "n8n/workflows/Alternance Tracker.workflow.ts" --lint
-```
-
-Puis renseigner l'identifiant du tableur dans le nœud `Settings` du workflow MVP.
-
-### Déploiement des workflows
-
-```powershell
-n8ncli push "n8n/workflows/Alternance Tracker.workflow.ts" --force
-n8ncli push "n8n/workflows/Alternance Tracker Auto.workflow.ts" --force
-```
-
-`--force` n'est nécessaire que si le workflow a été modifié dans l'interface n8n depuis le dernier push : les groupes de nœuds, par exemple, sont appliqués directement dans n8n.
-
-Les exports prêts à importer (n8n → *Import from file*) sont versionnés dans `Workflow/` :
-
-- `Workflow/Alternance Tracker.workflow.json`
-- `Workflow/Alternance Tracker Auto.workflow.json`
-
-Ils contiennent les identifiants de credentials de cette instance, jamais de secret : après import sur une autre instance, il suffit de resélectionner les credentials.
+1. n8n → *Workflows* → *Import from file*, puis choisir `Workflow/Alternance Tracker.workflow.json` (MVP) et/ou `Workflow/Alternance Tracker Auto.workflow.json`.
+2. Ouvrir le nœud `Settings` et renseigner `spreadsheetId` ; pour le MVP, vérifier aussi `userId`.
+3. Resélectionner les credentials Gemini, Google Sheets et Google Drive : les exports portent les identifiants de l'instance d'origine, jamais de secret.
+4. Pour le workflow automatique, appliquer les prérequis Adzuna décrits plus haut, puis activer le déclencheur quotidien.
 
 ## Contenu du dépôt
 
@@ -141,16 +123,21 @@ Les documents de travail (guide de démarrage, état d'avancement, schéma du ta
 - Ne jamais écrire `sent` sans preuve dans la boîte mail ; le workflow ne le fait jamais lui-même.
 - Tout document généré est `pending_review` : il doit être lu avant usage.
 - Ne jamais ajouter au CV une compétence absente de `Profiles`.
-- Le formulaire est le seul point d'entrée : une action par soumission.
+- Le formulaire reste le point d'entrée du MVP : une action par soumission. Le workflow automatique ne fait que collecter des offres et préparer des brouillons.
 
 ## Tests
 
-```powershell
-n8ncli validate "n8n/workflows/Alternance Tracker.workflow.ts" --lint
-n8ncli validate "n8n/workflows/Alternance Tracker Auto.workflow.ts" --lint
-```
+Le parcours complet du MVP (sept actions) a été exécuté sur l'instance locale, sur un CV réel.
 
-Les fixtures locales (`fixtures/`) servent aux tests manuels.
+Pour le workflow automatique, les exécutions suivantes ont validé la chaîne de bout en bout, avec des offres Adzuna simulées tant que le credential de l'API n'est pas créé :
 
-Le parcours complet du MVP a été exécuté sur l'instance locale.
-Pour le workflow Auto, la logique des nœuds Code (sélection du CV, normalisation des offres, déduplication, construction et validation du brouillon) est couverte par un harnais local ; le parcours réseau reste à valider après connexion des credentials Drive et Adzuna.
+| Contrôle | Résultat |
+|---|---|
+| CV lu depuis Drive et profil extrait par Gemini | OK |
+| Profil enregistré dans `Profiles` | OK |
+| Deux offres neuves traitées dans la même exécution | 2 lignes `Offers`, 2 brouillons |
+| Offres rejouées le lendemain | 0 nouvelle offre, déduplication par `external_id` |
+| Destinataire absent | `draft_to = A COMPLETER`, aucun envoi |
+| Avertissements de véracité | `SQL absent du profil`, `TypeScript absent du profil` |
+
+La validation statique des deux workflows (schéma n8n et lint) est passée sans erreur.
