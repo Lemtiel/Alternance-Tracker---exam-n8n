@@ -1,0 +1,101 @@
+{
+  "userId": "test-user-001",
+  "email": "candidat@example.com",
+  "displayName": "Jean Dupont",
+  "personalInfo": {
+    "firstName": "Jean",
+    "lastName": "Dupont",
+    "email": "candidat@example.com",
+    "phone": "+33 6 12 34 56 78",
+    "location": "Paris, France",
+    "linkedin": "linkedin.com/in/jeandupont"
+  },
+  "education": [
+    {
+      "degree": "Master en Informatique",
+      "institution": "Université Paris-Saclay",
+      "startDate": "2024-09",
+      "endDate": "2026-06",
+      "description": "Spécialisation en Intelligence Artificielle et Data Science"
+    },
+    {
+      "degree": "Licence Informatique",
+      "institution": "Université Paris Diderot",
+      "startDate": "2021-09",
+      "endDate": "2024-06",
+      "description": "Parcours développement logiciel"
+    }
+  ],
+  "experience": [
+    {
+      "title": "Développeur Web Junior",
+      "company": "StartupTech",
+      "startDate": "2023-06",
+      "endDate": "2023-08",
+      "description": "Stage de développement d'une application web e-commerce en React et Node.js. Participation au développement de l'API REST et de l'interface utilisateur. Utilisation de MongoDB pour la base de données."
+    },
+    {
+      "title": "Projet Personnel - Application Mobile",
+      "company": "Projet Universitaire",
+      "startDate": "2024-01",
+      "endDate": "2024-06",
+      "description": "Développement d'une application mobile de gestion de tâches avec React Native. Implémentation de notifications push et synchronisation cloud avec Firebase."
+    }
+  ],
+  "skills": [
+    {
+      "name": "Python",
+      "level": "Intermédiaire",
+      "category": "Langages"
+    },
+    {
+      "name": "JavaScript",
+      "level": "Intermédiaire",
+      "category": "Langages"
+    },
+    {
+      "name": "React",
+      "level": "Débutant",
+      "category": "Frameworks"
+    },
+    {
+      "name": "Node.js",
+      "level": "Débutant",
+      "category": "Frameworks"
+    },
+    {
+      "name": "SQL",
+      "level": "Intermédiaire",
+      "category": "Bases de données"
+    },
+    {
+      "name": "Git",
+      "level": "Intermédiaire",
+      "category": "Outils"
+    },
+    {
+      "name": "Docker",
+      "level": "Débutant",
+      "category": "DevOps"
+    }
+  ],
+  "languages": [
+    {
+      "language": "Français",
+      "level": "Natif"
+    },
+    {
+      "language": "Anglais",
+      "level": "B2 - Intermédiaire avancé"
+    }
+  ],
+  "certifications": [],
+  "projects": [
+    {
+      "name": "E-commerce Backend API",
+      "description": "API REST pour site e-commerce avec authentification JWT, gestion produits et commandes",
+      "technologies": ["Node.js", "Express", "MongoDB", "JWT"],
+      "url": "github.com/jeandupont/ecommerce-api"
+    }
+  ]
+}

@@ -1,20 +1,3 @@
-# Ignore everything by default
-*
-!*/
-
-# Keep only these folders and their contents
-!Workflow/
-!Workflow/**
-!Skills/
-!Skills/**
-!Video/
-!Video/**
-
-# Keep README.md at root
-!README.md
-
-# Keep .gitignore itself
-!.gitignore
 
 # n8n
 n8n-cli.json
