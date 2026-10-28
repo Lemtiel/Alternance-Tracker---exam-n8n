@@ -56,11 +56,30 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 
 ### Prérequis propres à ce workflow
 
-1. **Google Drive** : le credential `Google Drive account` existe déjà dans l'instance mais n'est pas encore connecté. L'ouvrir dans n8n, renseigner le client OAuth2 et autoriser le compte.
-2. **Adzuna** : créer un credential *Query Auth* nommé `Adzuna API` avec les champs `app_id` et `app_key` (inscription gratuite sur `developer.adzuna.com`), puis le sélectionner sur le nœud `Fetch Offers`.
-3. **`cvFolderId`** : remplacer `PASTE_YOUR_DRIVE_FOLDER_ID` par l'identifiant du dossier Drive.
+1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV.
+2. **`cvFolderId`** : facultatif. Laisser `PASTE_YOUR_DRIVE_FOLDER_ID` pour chercher tout le Drive avec `name contains 'CV'` ; sinon, mettre l'identifiant du dossier et la recherche s'y limite.
+3. **Adzuna** : l'API exige **deux** paramètres de requête (`app_id` et `app_key`), or le credential *Query Auth* n'en porte qu'un. Créer à la place un credential **Simplified Custom Auth** nommé `Adzuna API` (inscription gratuite sur `developer.adzuna.com`) :
 
-Tant que ces trois points ne sont pas faits, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
+   - **Template** :
+
+     ```json
+     { "qs": { "app_id": "{{app_id}}", "app_key": "{{app_key}}" } }
+     ```
+
+   - **Placeholders** :
+
+     ```json
+     [
+       { "name": "app_id", "title": "Adzuna app_id", "type": "plain" },
+       { "name": "app_key", "title": "Adzuna app_key", "type": "password" }
+     ]
+     ```
+
+   - **Placeholder Values** : `{ "app_id": "<votre app_id>", "app_key": "<votre app_key>" }`
+
+   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Simplified Custom Auth`, credential `Adzuna API`.
+
+Tant que le point 3 n'est pas fait, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
 
 ## Architecture
 
