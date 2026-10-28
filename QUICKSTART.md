@@ -89,6 +89,20 @@ Dans l'ordre, depuis le même formulaire :
 
 ---
 
+## 6 bis. Variante automatique (optionnelle)
+
+Le workflow `Alternance Tracker Auto` fait la même chose sans formulaire : il cherche les offres lui-même chaque matin à 08:00, lit le CV dans un dossier Google Drive et prépare les brouillons.
+
+Avant de le publier :
+
+1. Connecter le credential `Google Drive account` (créé mais vide) et autoriser le compte.
+2. Créer un credential *Query Auth* nommé `Adzuna API` (`app_id` + `app_key`, inscription gratuite) et le sélectionner sur le nœud `Fetch Offers`.
+3. Dans `Settings`, remplacer `PASTE_YOUR_DRIVE_FOLDER_ID` par l'identifiant du dossier Drive qui contient le CV.
+
+Il écrit dans le même tableur, donc le reste du parcours (lecture des brouillons, envoi manuel) ne change pas.
+
+---
+
 ## Problèmes courants
 
 ### Le formulaire ne répond rien

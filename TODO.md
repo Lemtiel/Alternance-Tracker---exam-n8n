@@ -26,6 +26,20 @@
 
 ---
 
+## 🤖 Workflow automatique `Alternance Tracker Auto` (2026-10-28)
+
+- [x] Source `n8n/workflows/Alternance Tracker Auto.workflow.ts` (17 nœuds, 4 groupes)
+- [x] Workflow poussé dans l'instance n8n : `famUstqu1tAcM0Lf`
+- [x] `n8ncli validate --lint` → VALID, `n8ncli diff` → identique au distant
+- [x] Logique des 6 nœuds Code vérifiée par un harnais local (13 contrôles)
+- [x] Ligne de sécurité : brouillon créé même sans destinataire (`draft_to = A COMPLETER`), jamais d'envoi
+- [ ] Connecter le credential `Google Drive account` (créé, vide)
+- [ ] Créer le credential *Query Auth* `Adzuna API` (`app_id`, `app_key`) et le sélectionner sur `Fetch Offers`
+- [ ] Renseigner `cvFolderId` dans `Settings`
+- [ ] Exécution réelle de bout en bout, puis publication du déclencheur quotidien
+
+---
+
 ## 🧪 Tests restants
 
 ### Déjà validés (2026-10-28)
@@ -56,7 +70,7 @@
 
 ## 🚀 Livraison
 
-- [ ] Export du workflow (JSON) dans `workflows/`
+- [x] Export JSON des deux workflows dans `Workflow/`
 - [ ] Capture d'écran du canvas pour la démonstration
 - [ ] Scénario de démo écrit
 
@@ -82,6 +96,7 @@
 | Credential Gemini | ✅ |
 | Identifiant du tableur | ✅ |
 | Workflow unique (27 nœuds) | ✅ |
+| Workflow automatique (17 nœuds) | ✅ |
 | Validation SDK + lint | ✅ |
 | Parcours complet sur fixtures | ✅ |
 | Deuxième offre + cas limites | ⏳ |

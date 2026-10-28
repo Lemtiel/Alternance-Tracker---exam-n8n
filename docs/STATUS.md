@@ -87,6 +87,20 @@ Aucun.
 
 ---
 
+## 🤖 Workflow automatique `Alternance Tracker Auto`
+
+Poussé dans l'instance locale le 2026-10-28, identifiant `famUstqu1tAcM0Lf`.
+
+- 17 nœuds, 4 groupes, une seule branche linéaire : `Daily Trigger` → `Settings` → profil CV → collecte des offres → brouillons.
+- Source : `n8n/workflows/Alternance Tracker Auto.workflow.ts` ; export importable : `Workflow/Alternance Tracker Auto.workflow.json`.
+- `n8ncli validate --lint` : VALID ; `n8ncli diff` : identique au distant.
+- Les six nœuds Code ont été exécutés hors n8n dans un harnais local (13 contrôles : choix du PDF, parsing du profil, normalisation Adzuna, déduplication et plafond, construction du prompt, refus d'une référence modifiée, plafonnement du score, destinataire absent).
+- Le workflow est laissé **inactif** : sans credential Drive connecté, sans credential `Adzuna API` et sans `cvFolderId`, une exécution planifiée échouerait chaque matin.
+
+**Ce qui reste à faire côté utilisateur** : connecter `Google Drive account`, créer le credential *Query Auth* `Adzuna API`, renseigner `cvFolderId`, puis publier le workflow.
+
+---
+
 ## 🎓 Ce que le projet démontre
 
 - Conception d'un workflow unique à branches plutôt qu'une constellation de workflows
