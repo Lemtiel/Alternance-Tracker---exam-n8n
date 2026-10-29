@@ -133,12 +133,10 @@ Les documents de travail (guide de démarrage, état d'avancement, schéma du ta
 
 Le parcours complet du MVP (sept actions) a été exécuté sur l'instance locale, sur un CV réel.
 
-Pour le workflow automatique, les exécutions 40 et 41 ont validé la chaîne de bout en bout, avec des offres fantastic.jobs simulées tant que le credential de l'API n'est pas créé :
+Les exécutions 35 et 36 ont validé la lecture réelle du CV dans Drive, l'extraction Gemini, l'écriture dans Sheets et la déduplication. Les exécutions 40 à 42 ont rejoué la chaîne des offres avec des données fantastic.jobs épinglées et un profil de test, le credential Drive étant à reconnecter :
 
 | Contrôle | Résultat |
 |---|---|
-| CV lu depuis Drive et profil extrait par Gemini | OK |
-| Profil enregistré dans `Profiles` | OK |
 | Réponse ATS normalisée : HTML nettoyé, `locations_derived`, `domain_derived` | OK |
 | Offre plus ancienne que `maxDaysOld` | écartée avant tout appel LLM |
 | Deux offres neuves dans la même exécution | 2 lignes `Offers`, 2 brouillons |
