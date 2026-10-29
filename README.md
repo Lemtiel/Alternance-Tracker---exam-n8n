@@ -30,7 +30,7 @@ Chaque prompt suit le format XML imposé : `<role>`, `<instructions>` (`<goal>`,
 
 **`Alternance Tracker Auto`** : 17 nœuds, 4 groupes, aucun formulaire à remplir à chaque exécution.
 Identifiant n8n : `famUstqu1tAcM0Lf`.
-Export importable : `Workflow/Alternance Tracker Auto.workflow.json`.
+Export importable : `Workflow/Alternance Tracker Auto.workflow.ts` (format workflow-as-code n8n).
 
 Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workflows alimentent un seul suivi.
 
@@ -39,7 +39,7 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 | `Daily Trigger` | Schedule Trigger, une fois par jour à 08:00 |
 | `Settings` | Critères de recherche et identifiants, à régler une seule fois |
 | `CV profile` | Cherche le CV dans le dossier Drive, prend le PDF en priorité, l'envoie à Gemini et enregistre le profil (1 appel LLM) |
-| `Offer harvesting` | Interroge l'API fantastic.jobs (`active-ats`), écarte les offres déjà connues, plafonne à `maxOffers` |
+| `Offer harvesting` | Interroge l'API La bonne alternance (`/api/job/v1/search`), écarte les offres déjà connues, plafonne à `maxOffers` |
 | `Draft preparation` | Note chaque offre et écrit un brouillon d'e-mail par offre (1 appel LLM par offre) |
 
 | Paramètre (`Settings`) | Rôle |
@@ -61,36 +61,20 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 
 1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV. S'il échoue en `invalid_client`, le client OAuth ou son jeton n'est plus accepté par Google : rouvrir le credential et le reconnecter.
 2. **`cvFolderId`** : facultatif. Laisser `PASTE_YOUR_DRIVE_FOLDER_ID` pour chercher tout le Drive avec `name contains 'CV'` ; sinon, mettre l'identifiant du dossier et la recherche s'y limite.
-3. **fantastic.jobs** : l'API `active-ats` s'authentifie par un en-tête `Authorization: Bearer <clé>`. Créer un credential **Simplified Custom Auth** nommé `Fantastic Jobs API` (clé d'essai de 15 jours sur `fantastic.jobs/api`), puis le sélectionner sur `Fetch Offers` :
+3. **La bonne alternance** : l'API de recherche s'authentifie par un en-tête `Authorization: Bearer <clé>`. Créer un credential **Bearer Auth** nommé `La bonne alternance`, y coller la clé seule (sans le préfixe `Bearer `), puis le sélectionner sur `Fetch Offers`.
 
-   - **Template** :
+   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Bearer Auth`, credential `La bonne alternance`, URL = `https://api.apprentissage.beta.gouv.fr/api/job/v1/search`.
 
-     ```json
-     { "headers": { "Authorization": "Bearer {{api_key}}" } }
-     ```
+   Les paramètres de requête du nœud (`time_frame`, `description`, `location`, `ai_language`, `description_format`, `date_posted_gte`, `limit`) sont encore ceux de l'ancien fournisseur. Ils restent à aligner sur le contrat de `La bonne alternance` (`caller`, `romes`, `latitude`/`longitude` ou `insee`, `radius`) avant la mise en service : tant que ce point n'est pas fait, l'appel répond une erreur et aucune offre n'est collectée.
 
-   - **Placeholders** :
-
-     ```json
-     [
-       { "name": "api_key", "title": "Clé API fantastic.jobs", "type": "password" }
-     ]
-     ```
-
-   - **Placeholder Values** : `{ "api_key": "<votre clé>" }`
-
-   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Simplified Custom Auth`, credential `Fantastic Jobs API`.
-
-   `Fetch Offers` envoie `time_frame`, `description`, `location`, `ai_language=French`, `description_format=text`, `date_posted_gte` et `limit`. Chaque offre retournée coûte un crédit : `maxFetch` plafonne la dépense, `timeFrame=24h` évite de redemander les mêmes offres chaque jour.
-
-Tant que le point 3 n'est pas fait, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
+Tant que les points 1 et 3 ne sont pas faits, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
 
 ## Architecture
 
 - **n8n** : `2.44.5`, instance locale sur `127.0.0.1:5678`
 - **Stockage** : Google Sheets, 6 onglets : `Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`
 - **Modèle** : `models/gemini-flash-lite-latest`
-- **Offres (Auto)** : API fantastic.jobs `active-ats` (offres publiées sur les pages carrières), remplaçable dans le nœud `Fetch Offers`
+- **Offres (Auto)** : API La bonne alternance `/api/job/v1/search` (offres d'alternance collectées par La bonne alternance et ses partenaires), remplaçable dans le nœud `Fetch Offers`
 - **Journal d'audit** : historique d'exécution n8n
 
 Une migration future vers une base relationnelle reste possible ; pour le MVP, les six onglets sont la référence.
@@ -104,10 +88,11 @@ Une migration future vers une base relationnelle reste possible ; pour le MVP, l
 
 ### Import
 
-1. n8n → *Workflows* → *Import from file*, puis choisir `Workflow/Alternance Tracker.workflow.json` (MVP) et/ou `Workflow/Alternance Tracker Auto.workflow.json`.
+1. MVP : n8n → *Workflows* → *Import from file*, puis choisir `Workflow/Alternance Tracker.workflow.json`.
+   Workflow automatique : `Workflow/Alternance Tracker Auto.workflow.ts` est un fichier workflow-as-code, déployé avec `n8ncli push` (ou importé depuis le canevas après conversion).
 2. Ouvrir le nœud `Settings` et renseigner `spreadsheetId` ; pour le MVP, vérifier aussi `userId`.
 3. Resélectionner les credentials Gemini, Google Sheets et Google Drive : les exports portent les identifiants de l'instance d'origine, jamais de secret.
-4. Pour le workflow automatique, appliquer les prérequis fantastic.jobs décrits plus haut, puis activer le déclencheur quotidien.
+4. Pour le workflow automatique, appliquer les prérequis La bonne alternance décrits plus haut, puis activer le déclencheur quotidien.
 
 ## Contenu du dépôt
 
@@ -116,7 +101,7 @@ Le dépôt public ne publie que les livrables :
 | Élément | Contenu |
 |---|---|
 | `README.md` | Ce document |
-| `Workflow/` | Les exports JSON importables des deux workflows |
+| `Workflow/` | Le workflow MVP (`Alternance Tracker.workflow.json`) et le workflow automatique (`Alternance Tracker Auto.workflow.ts`, workflow-as-code) |
 | `Skills/` | Les trois skills utilisés pour concevoir et relire le projet (`interview`, `hostile-review`, `doubt-driven-dev`) |
 | `Vidéo/` | Emplacement de la vidéo de présentation |
 
