@@ -28,7 +28,7 @@ Chaque prompt suit le format XML imposé : `<role>`, `<instructions>` (`<goal>`,
 
 ## Workflow automatique (version 1.1)
 
-**`Alternance Tracker Auto`** : 17 nœuds, 4 groupes, aucun formulaire à remplir à chaque exécution.
+**`Alternance Tracker Auto`** : 18 nœuds, aucun formulaire à remplir à chaque exécution.
 Identifiant n8n : `famUstqu1tAcM0Lf`.
 Export importable : `Workflow/Alternance Tracker Auto.workflow.ts` (format workflow-as-code n8n).
 
@@ -39,19 +39,24 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 | `Daily Trigger` | Schedule Trigger, une fois par jour à 08:00 |
 | `Settings` | Critères de recherche et identifiants, à régler une seule fois |
 | `CV profile` | Cherche le CV dans le dossier Drive, prend le PDF en priorité, l'envoie à Gemini et enregistre le profil (1 appel LLM) |
-| `Offer harvesting` | Interroge l'API La bonne alternance (`/api/job/v1/search`), écarte les offres déjà connues, plafonne à `maxOffers` |
+| `Offer harvesting` | Interroge fantastic.jobs (`/v1/active-ats`) puis La bonne alternance (`/api/job/v1/search`), normalise et fusionne les deux flux, écarte les offres déjà connues, plafonne à `maxOffers` |
 | `Draft preparation` | Note chaque offre et écrit un brouillon d'e-mail par offre (1 appel LLM par offre) |
 
 | Paramètre (`Settings`) | Rôle |
 |---|---|
-| `keywords` | Texte recherché dans le titre et la description des offres |
-| `location` | Zone de recherche, en nom complet (`Toulouse, Occitanie, France`) |
-| `timeFrame` | Fenêtre de l'API : `24h` pour un passage quotidien, `7d` pour un rattrapage |
-| `maxFetch` | Nombre d'offres demandées à l'API par exécution, donc plafond de crédits consommés |
+| `keywords` | Mots-clés d'alternance (`alternance,apprentissage`) : un titre ou une description fantastic.jobs doit en contenir un |
+| `location` | Zone de recherche en nom complet (`Toulouse, Occitanie, France`) ; le pays sert à écarter les offres fantastic.jobs hors zone |
+| `latitude`, `longitude` | Centre de la recherche La bonne alternance (Toulouse : `43.6047`, `1.4442`) |
+| `radius` | Rayon en kilomètres autour de ce centre |
+| `targetDiplomaLevel` | Niveau de diplôme visé par La bonne alternance (`5` = bac+2) |
+| `timeFrame` | Fenêtre de fantastic.jobs : `7d` par défaut, `24h` pour un passage quotidien |
+| `maxFetch` | Nombre d'offres demandées à fantastic.jobs par exécution |
 | `maxOffers` | Nombre maximum d'offres traitées par jour, donc plafond du coût LLM |
-| `maxDaysOld` | Ancienneté maximale des offres |
+| `maxDaysOld` | Ancienneté maximale des offres fantastic.jobs ; La bonne alternance ne renvoie que des offres actives |
 | `cvFolderId` | Dossier Google Drive du CV ; facultatif, sinon recherche par nom |
 | `spreadsheetId`, `userId` | Tableur cible et identifiant de profil |
+
+**Deux sources, un seul flux.** Les offres fantastic.jobs sont gardées si elles citent un mot-clé de `keywords` et se situent dans le pays de `location` ; La bonne alternance ne renvoie que des offres d'alternance actives, donc elles sont toutes conservées. Les doublons sont retirés sur `external_id`, puis les deux sources sont entrelacées, la plus récente de chacune d'abord, pour que `maxOffers` ne consomme jamais tout le budget sur une seule plateforme.
 
 **Coût** : 1 appel Gemini pour le CV + 1 appel par nouvelle offre, jamais plus de `maxOffers` par jour.
 
@@ -61,11 +66,11 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 
 1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV. S'il échoue en `invalid_client`, le client OAuth ou son jeton n'est plus accepté par Google : rouvrir le credential et le reconnecter.
 2. **`cvFolderId`** : facultatif. Laisser `PASTE_YOUR_DRIVE_FOLDER_ID` pour chercher tout le Drive avec `name contains 'CV'` ; sinon, mettre l'identifiant du dossier et la recherche s'y limite.
-3. **La bonne alternance** : l'API de recherche s'authentifie par un en-tête `Authorization: Bearer <clé>`. Créer un credential **Bearer Auth** nommé `La bonne alternance`, y coller la clé seule (sans le préfixe `Bearer `), puis le sélectionner sur `Fetch Offers`.
+3. **Deux credentials Bearer Auth**, chacun avec la clé seule (sans le préfixe `Bearer `) :
+   - `Fantastic Jobs API`, sélectionné sur `Fetch Fantastic Offers` : URL `https://data.fantastic.jobs/v1/active-ats`, paramètres `time_frame`, `ai_language`, `description_format`, `limit`.
+   - `La bonne alternance`, sélectionné sur `Fetch Lba Offers` : URL `https://api.apprentissage.beta.gouv.fr/api/job/v1/search`, paramètres `latitude`, `longitude`, `radius`, `target_diploma_level`.
 
-   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Bearer Auth`, credential `La bonne alternance`, URL = `https://api.apprentissage.beta.gouv.fr/api/job/v1/search`.
-
-   Les paramètres de requête du nœud (`time_frame`, `description`, `location`, `ai_language`, `description_format`, `date_posted_gte`, `limit`) sont encore ceux de l'ancien fournisseur. Ils restent à aligner sur le contrat de `La bonne alternance` (`caller`, `romes`, `latitude`/`longitude` ou `insee`, `radius`) avant la mise en service : tant que ce point n'est pas fait, l'appel répond une erreur et aucune offre n'est collectée.
+   Sur les deux nœuds : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Bearer Auth`. Les valeurs de requête viennent de `Settings`, sauf `ai_language` et `description_format` qui restent fixes.
 
 Tant que les points 1 et 3 ne sont pas faits, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
 
@@ -74,7 +79,7 @@ Tant que les points 1 et 3 ne sont pas faits, laisser le workflow **inactif** : 
 - **n8n** : `2.44.5`, instance locale sur `127.0.0.1:5678`
 - **Stockage** : Google Sheets, 6 onglets : `Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`
 - **Modèle** : `models/gemini-flash-lite-latest`
-- **Offres (Auto)** : API La bonne alternance `/api/job/v1/search` (offres d'alternance collectées par La bonne alternance et ses partenaires), remplaçable dans le nœud `Fetch Offers`
+- **Offres (Auto)** : deux API publiques, fantastic.jobs `/v1/active-ats` et La bonne alternance `/api/job/v1/search`, fusionnées dans un seul flux d'offres
 - **Journal d'audit** : historique d'exécution n8n
 
 Une migration future vers une base relationnelle reste possible ; pour le MVP, les six onglets sont la référence.
@@ -92,7 +97,7 @@ Une migration future vers une base relationnelle reste possible ; pour le MVP, l
    Workflow automatique : `Workflow/Alternance Tracker Auto.workflow.ts` est un fichier workflow-as-code, déployé avec `n8ncli push` (ou importé depuis le canevas après conversion).
 2. Ouvrir le nœud `Settings` et renseigner `spreadsheetId` ; pour le MVP, vérifier aussi `userId`.
 3. Resélectionner les credentials Gemini, Google Sheets et Google Drive : les exports portent les identifiants de l'instance d'origine, jamais de secret.
-4. Pour le workflow automatique, appliquer les prérequis La bonne alternance décrits plus haut, puis activer le déclencheur quotidien.
+4. Pour le workflow automatique, appliquer les prérequis des deux API décrits plus haut, puis activer le déclencheur quotidien.
 
 ## Contenu du dépôt
 
@@ -129,5 +134,8 @@ Les exécutions 35 et 36 ont validé la lecture réelle du CV dans Drive, l'extr
 | Contact exposé par l'offre | repris dans `Offers.contact_email` et `Applications.draft_to` |
 | Profil volontairement vide | score 0, `skip`, avertissement, aucune compétence inventée |
 | Destinataire absent | `draft_to = A COMPLETER`, aucun envoi |
+| Récolte sur les deux sources | fantastic.jobs et La bonne alternance renvoient tous deux des offres, fusionnées et entrelacées dans un seul flux |
+| Doublons de La bonne alternance | retirés sur `external_id` avant tout appel LLM |
+| Offre fantastic.jobs hors sujet (autre pays, sans mot-clé) | écartée par `keywords` et le pays de `location` |
 
 La validation statique des deux workflows (schéma n8n et lint) est passée sans erreur.
