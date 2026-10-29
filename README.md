@@ -39,13 +39,16 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 | `Daily Trigger` | Schedule Trigger, une fois par jour à 08:00 |
 | `Settings` | Critères de recherche et identifiants, à régler une seule fois |
 | `CV profile` | Cherche le CV dans le dossier Drive, prend le PDF en priorité, l'envoie à Gemini et enregistre le profil (1 appel LLM) |
-| `Offer harvesting` | Interroge l'API Adzuna, écarte les offres déjà connues, plafonne à `maxOffers` |
+| `Offer harvesting` | Interroge l'API fantastic.jobs (`active-ats`), écarte les offres déjà connues, plafonne à `maxOffers` |
 | `Draft preparation` | Note chaque offre et écrit un brouillon d'e-mail par offre (1 appel LLM par offre) |
 
 | Paramètre (`Settings`) | Rôle |
 |---|---|
-| `keywords`, `location`, `countryCode` | Requête et pays envoyés à l'API |
-| `maxOffers` | Nombre maximum d'offres traitées par jour, donc plafond de coût |
+| `keywords` | Texte recherché dans le titre et la description des offres |
+| `location` | Zone de recherche, en nom complet (`Toulouse, Occitanie, France`) |
+| `timeFrame` | Fenêtre de l'API : `24h` pour un passage quotidien, `7d` pour un rattrapage |
+| `maxFetch` | Nombre d'offres demandées à l'API par exécution, donc plafond de crédits consommés |
+| `maxOffers` | Nombre maximum d'offres traitées par jour, donc plafond du coût LLM |
 | `maxDaysOld` | Ancienneté maximale des offres |
 | `cvFolderId` | Dossier Google Drive du CV ; facultatif, sinon recherche par nom |
 | `spreadsheetId`, `userId` | Tableur cible et identifiant de profil |
@@ -56,28 +59,29 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 
 ### Prérequis propres à ce workflow
 
-1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV.
+1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV. S'il échoue en `invalid_client`, le client OAuth ou son jeton n'est plus accepté par Google : rouvrir le credential et le reconnecter.
 2. **`cvFolderId`** : facultatif. Laisser `PASTE_YOUR_DRIVE_FOLDER_ID` pour chercher tout le Drive avec `name contains 'CV'` ; sinon, mettre l'identifiant du dossier et la recherche s'y limite.
-3. **Adzuna** : l'API exige **deux** paramètres de requête (`app_id` et `app_key`), or le credential *Query Auth* n'en porte qu'un. Créer à la place un credential **Simplified Custom Auth** nommé `Adzuna API` (inscription gratuite sur `developer.adzuna.com`) :
+3. **fantastic.jobs** : l'API `active-ats` s'authentifie par un en-tête `Authorization: Bearer <clé>`. Créer un credential **Simplified Custom Auth** nommé `Fantastic Jobs API` (clé d'essai de 15 jours sur `fantastic.jobs/api`), puis le sélectionner sur `Fetch Offers` :
 
    - **Template** :
 
      ```json
-     { "qs": { "app_id": "{{app_id}}", "app_key": "{{app_key}}" } }
+     { "headers": { "Authorization": "Bearer {{api_key}}" } }
      ```
 
    - **Placeholders** :
 
      ```json
      [
-       { "name": "app_id", "title": "Adzuna app_id", "type": "plain" },
-       { "name": "app_key", "title": "Adzuna app_key", "type": "password" }
+       { "name": "api_key", "title": "Clé API fantastic.jobs", "type": "password" }
      ]
      ```
 
-   - **Placeholder Values** : `{ "app_id": "<votre app_id>", "app_key": "<votre app_key>" }`
+   - **Placeholder Values** : `{ "api_key": "<votre clé>" }`
 
-   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Simplified Custom Auth`, credential `Adzuna API`.
+   Puis, sur `Fetch Offers` : *Authentication* = `Generic Credential Type`, *Generic Auth Type* = `Simplified Custom Auth`, credential `Fantastic Jobs API`.
+
+   `Fetch Offers` envoie `time_frame`, `description`, `location`, `ai_language=French`, `description_format=text`, `date_posted_gte` et `limit`. Chaque offre retournée coûte un crédit : `maxFetch` plafonne la dépense, `timeFrame=24h` évite de redemander les mêmes offres chaque jour.
 
 Tant que le point 3 n'est pas fait, laisser le workflow **inactif** : le déclencheur planifié échouerait chaque matin.
 
@@ -86,7 +90,7 @@ Tant que le point 3 n'est pas fait, laisser le workflow **inactif** : le déclen
 - **n8n** : `2.44.5`, instance locale sur `127.0.0.1:5678`
 - **Stockage** : Google Sheets, 6 onglets : `Configuration`, `Profiles`, `Offers`, `Offer_Analyses`, `Applications`, `Documents`
 - **Modèle** : `models/gemini-flash-lite-latest`
-- **Offres (Auto)** : API publique Adzuna, remplaçable dans le nœud `Fetch Offers`
+- **Offres (Auto)** : API fantastic.jobs `active-ats` (offres publiées sur les pages carrières), remplaçable dans le nœud `Fetch Offers`
 - **Journal d'audit** : historique d'exécution n8n
 
 Une migration future vers une base relationnelle reste possible ; pour le MVP, les six onglets sont la référence.
@@ -103,7 +107,7 @@ Une migration future vers une base relationnelle reste possible ; pour le MVP, l
 1. n8n → *Workflows* → *Import from file*, puis choisir `Workflow/Alternance Tracker.workflow.json` (MVP) et/ou `Workflow/Alternance Tracker Auto.workflow.json`.
 2. Ouvrir le nœud `Settings` et renseigner `spreadsheetId` ; pour le MVP, vérifier aussi `userId`.
 3. Resélectionner les credentials Gemini, Google Sheets et Google Drive : les exports portent les identifiants de l'instance d'origine, jamais de secret.
-4. Pour le workflow automatique, appliquer les prérequis Adzuna décrits plus haut, puis activer le déclencheur quotidien.
+4. Pour le workflow automatique, appliquer les prérequis fantastic.jobs décrits plus haut, puis activer le déclencheur quotidien.
 
 ## Contenu du dépôt
 
@@ -129,15 +133,18 @@ Les documents de travail (guide de démarrage, état d'avancement, schéma du ta
 
 Le parcours complet du MVP (sept actions) a été exécuté sur l'instance locale, sur un CV réel.
 
-Pour le workflow automatique, les exécutions suivantes ont validé la chaîne de bout en bout, avec des offres Adzuna simulées tant que le credential de l'API n'est pas créé :
+Pour le workflow automatique, les exécutions 40 et 41 ont validé la chaîne de bout en bout, avec des offres fantastic.jobs simulées tant que le credential de l'API n'est pas créé :
 
 | Contrôle | Résultat |
 |---|---|
 | CV lu depuis Drive et profil extrait par Gemini | OK |
 | Profil enregistré dans `Profiles` | OK |
-| Deux offres neuves traitées dans la même exécution | 2 lignes `Offers`, 2 brouillons |
-| Offres rejouées le lendemain | 0 nouvelle offre, déduplication par `external_id` |
+| Réponse ATS normalisée : HTML nettoyé, `locations_derived`, `domain_derived` | OK |
+| Offre plus ancienne que `maxDaysOld` | écartée avant tout appel LLM |
+| Deux offres neuves dans la même exécution | 2 lignes `Offers`, 2 brouillons |
+| Mêmes offres rejouées | 0 nouvelle offre, déduplication sur `external_id` |
+| Contact exposé par l'offre | repris dans `Offers.contact_email` et `Applications.draft_to` |
+| Profil volontairement vide | score 0, `skip`, avertissement, aucune compétence inventée |
 | Destinataire absent | `draft_to = A COMPLETER`, aucun envoi |
-| Avertissements de véracité | `SQL absent du profil`, `TypeScript absent du profil` |
 
 La validation statique des deux workflows (schéma n8n et lint) est passée sans erreur.
