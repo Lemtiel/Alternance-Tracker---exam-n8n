@@ -2,26 +2,37 @@
 
 ## Introduction
 
-« Je vous présente Alternance Tracker Auto, un workflow n8n qui recherche des offres d’alternance, les compare au profil du candidat et prépare des brouillons de candidature. »
+« Je vous présente Alternance Tracker Auto, un workflow n8n qui interroge des sources d’offres d’alternance, filtre les résultats, les compare au profil du candidat et prépare des brouillons Gmail. Les candidatures ne sont jamais envoyées automatiquement. »
 
 ## Déroulé à l’écran
 
-1. **Déclenchement et préférences** — « Une recherche démarre chaque jour à 8 h. Un formulaire indépendant permet de saisir les mots-clés et secteurs recherchés, et de remplacer le CV avec un PDF. Les critères et le CV sont conservés : le formulaire n’est pas à remplir à chaque exécution. »
-2. **Lecture du profil** — « Le workflow utilise le dernier CV enregistré dans Drive, ou celui du dossier configuré. Gemini en extrait les informations utiles, puis le profil est enregistré dans Google Sheets. »
-3. **Sources en parallèle** — « Fantastic Jobs et La Bonne Alternance sont interrogés simultanément. La fenêtre Fantastic Jobs est réglée sur 24 heures pour correspondre à la recherche quotidienne, avec un maximum de 50 résultats demandés. Les branches rejoignent le même point de fusion, où l’on pourra raccorder d’autres sources. »
-4. **Résilience et alertes** — « Une erreur ou un quota dépassé chez Fantastic Jobs ne bloque pas les résultats de La Bonne Alternance. Une alerte détaille les réponses de chaque source si l’une échoue ou si aucune offre n’est reçue. D’autres alertes expliquent l’absence de critères, l’absence de correspondance ou l’absence de nouvelle offre. »
-5. **Filtrage et contacts** — « Après normalisation, le workflow garde uniquement les offres qui correspondent à au moins un mot-clé ou secteur, puis écarte celles déjà enregistrées. Il recherche une adresse de contact publiée par l’entreprise ; s’il n’en trouve pas, il ne l’invente pas. »
-6. **Analyse et brouillons** — « Gemini évalue chaque nouvelle offre correspondante par rapport au CV. Il peut recommander de passer une offre ; celles retenues produisent un brouillon Gmail et une ligne de suivi. Le nombre d’offres n’est plus plafonné artificiellement ; le volume d’appels Gemini dépend donc des offres filtrées. »
+1. **Déclenchement et préférences** — « La recherche démarre automatiquement selon le planning du workflow. Le formulaire séparé permet d’enregistrer des mots-clés, des secteurs ou un nouveau CV PDF. Les préférences restent enregistrées pour les prochaines recherches : il n’est pas nécessaire de remplir le formulaire à chaque fois. »
+2. **Profil candidat** — « Le workflow choisit le CV configuré ou en trouve un dans le dossier Drive. Gemini en extrait les informations utiles ; le profil est ensuite validé et enregistré dans Google Sheets. »
+3. **Collecte des offres** — « Les deux branches font des requêtes HTTP vers les API de Fantastic Jobs et de La Bonne Alternance, en parallèle. Ce sont des appels à des API : le workflow ne parcourt pas les pages des sites pour en extraire le contenu comme un scraper HTML. Les réponses sont réunies au même point pour permettre d’ajouter d’autres sources. »
+4. **État réel des sources** — « Lors de l’exécution consultée le 1er novembre 2026, Fantastic Jobs a répondu HTTP 403 avec un message de quota “jobs” dépassé. La Bonne Alternance a continué sur sa branche indépendante. Cela confirme que la collecte est bien lancée, mais pas que Fantastic Jobs fournit actuellement des offres. Une autre exécution récente s’est arrêtée dans “Lookup Public Contact Email” parce qu’une offre n’avait ni domaine d’entreprise ni URL : cette limite doit être corrigée pour que l’enrichissement ne bloque pas le reste. »
+5. **Filtrage et dédoublonnage** — « Les offres sont harmonisées, puis comparées aux critères enregistrés et aux offres déjà présentes dans la feuille de suivi. La feuille “Offers” contenait 70 lignes lors de l’exécution observée. L’alerte “aucune nouvelle offre” signifie qu’aucune offre n’a atteint la suite du traitement comme nouvelle offre ; elle ne signifie pas nécessairement que les API n’ont renvoyé aucun résultat. À noter : dans la logique actuelle, si moins de cinq offres correspondent aux critères, les autres offres récupérées peuvent compléter la sélection. »
+6. **Recherche d’un contact** — « Le workflow réutilise d’abord l’adresse éventuelle présente dans l’annonce. Il peut ensuite lire la page publique de l’entreprise et repérer une adresse affichée. Il ne fait pas de recherche Google ou LinkedIn et n’invente aucune adresse. Si l’offre ne fournit pas de site ni d’URL, la requête de lecture doit être ignorée au lieu d’arrêter le traitement. »
+7. **Analyse et brouillons** — « Gemini reçoit une offre à la fois avec le profil du candidat et une consigne de ne pas inventer de faits. Le résultat est validé avant d’être enregistré. Les brouillons sont créés dans Gmail pour relecture manuelle ; aucune candidature n’est envoyée. Le seuil de cinq ne peut être atteint que s’il existe au moins cinq offres distinctes qui arrivent à cette étape. »
+
+## Pourquoi les nœuds Code sont présents
+
+« Les nœuds Code servent surtout à transformer les données et à appliquer les règles propres au projet. Les nœuds HTTP, Google Sheets, Drive et Gmail se chargent des connexions aux services ; le Code organise les données entre ces étapes. »
+
+- **Préférences du formulaire** — `Prepare Search Preferences`, `Build Configuration after CV Upload` et `Build Configuration without CV Upload` valident les champs, conservent les critères précédents lorsqu’ils ne sont pas remplacés et préparent la ligne à enregistrer.
+- **Choix et lecture du CV** — `Resolve Search Preferences` transmet la configuration sauvegardée ; `Pick Cv File` choisit le CV approprié ; `Parse Cv Profile` extrait et valide le JSON renvoyé par Gemini avant l’enregistrement.
+- **Traitement des annonces** — `Extract Offers` convertit les réponses différentes des deux API en annonces normalisées et élimine les doublons ; `Filter by Candidate Criteria` applique les mots-clés et secteurs ; `Filter New Offers` retire les annonces déjà suivies et ajoute un identifiant de suivi.
+- **Contact et préparation du message** — `Enrich Candidate Contact` repère une adresse publiée dans la réponse du site ; `Build Draft Prompt` assemble l’annonce, le profil et les garde-fous transmis à Gemini ; `Parse Draft` contrôle le JSON et rattache chaque réponse à la bonne offre.
+- **Création et alertes** — `Select Gmail Drafts` sélectionne les brouillons valides et complète avec un message neutre lorsque la logique actuelle le permet ; `Build No New Offers Alert` explique pourquoi aucune offre n’est retenue ; `Build Search Alert` résume les résultats et erreurs des sources.
 
 ## Conclusion
 
-« Le workflow automatise la veille et la préparation, tout en laissant la décision finale au candidat : les messages sont des brouillons à relire et à envoyer manuellement. Le système envoie des alertes de fonctionnement, mais n’envoie jamais automatiquement les emails de candidature. »
+« Le workflow automatise une veille et prépare des brouillons, mais il dépend de la disponibilité et des quotas des API. Les alertes permettent de distinguer une source indisponible d’une absence de nouvelles offres. Le candidat garde la main pour vérifier le destinataire, relire le message et l’envoyer lui-même. »
 
 ## Plans de capture suggérés
 
-- Vue d’ensemble du workflow, puis zoom sur les deux branches de recherche et leur nœud de fusion.
-- Formulaire de préférences et réglages persistés.
-- Branche de création du profil à partir du CV.
-- Branche de filtrage, recherche de contact, comparaison avec Gemini et création du brouillon Gmail.
-- Alertes de source défaillante, de quota atteint et d’absence de nouvelles offres.
-- Tableur de suivi et exemple de brouillon, en masquant les données personnelles.
+- Vue d’ensemble du workflow et des deux branches HTTP parallèles.
+- Exécution montrant l’erreur de quota Fantastic Jobs et la poursuite de la branche La Bonne Alternance.
+- Formulaire des préférences et stockage dans Google Sheets.
+- Nœuds Code de normalisation, filtrage, dédoublonnage et contrôle des réponses Gemini.
+- Exemple d’alerte « aucune nouvelle offre » et exemple de brouillon Gmail, données personnelles masquées.
+- Signaler à l’écran que l’échec de `Lookup Public Contact Email` lié à une URL vide reste un point à corriger avant de présenter le workflow comme entièrement fiable.
