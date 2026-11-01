@@ -6,12 +6,12 @@
 
 ## Déroulé à l’écran
 
-1. **Déclenchement et réglages** — « Le workflow se lance chaque jour à 8 h. Le nœud Settings centralise les critères de recherche : mots-clés, localisation, rayon, niveau de diplôme et période. »
-2. **Lecture du profil** — « Il récupère le CV depuis Google Drive, en extrait les informations utiles avec Gemini, puis enregistre le profil dans Google Sheets. »
-3. **Recherche en parallèle** — « Fantastic Jobs et La Bonne Alternance sont interrogés simultanément. Leurs résultats sont réunis au même endroit ; on peut ajouter d’autres sources en leur donnant une branche vers ce point de fusion. »
-4. **Résilience et alertes** — « Une erreur ou un quota dépassé sur une source ne bloque pas les résultats de l’autre. Si aucune source ne fournit d’offre, un email récapitule l’état de chaque service et les vérifications à faire. Une autre alerte signale quand il n’y a aucune nouvelle offre exploitable, par exemple après dédoublonnage. »
-5. **Sélection et suivi** — « Les offres déjà enregistrées sont écartées. Les nouvelles sont limitées selon les réglages, puis ajoutées au tableur avec leur statut et leurs informations de suivi. »
-6. **Préparation des candidatures** — « Gemini évalue la correspondance entre le CV et chaque offre, puis rédige un sujet et un message à partir des seules informations vérifiables du profil. Les candidatures retenues sont enregistrées dans le suivi et préparées dans Gmail. »
+1. **Déclenchement et préférences** — « Une recherche démarre chaque jour à 8 h. Un formulaire indépendant permet de saisir les mots-clés et secteurs recherchés, et de remplacer le CV avec un PDF. Les critères et le CV sont conservés : le formulaire n’est pas à remplir à chaque exécution. »
+2. **Lecture du profil** — « Le workflow utilise le dernier CV enregistré dans Drive, ou celui du dossier configuré. Gemini en extrait les informations utiles, puis le profil est enregistré dans Google Sheets. »
+3. **Sources en parallèle** — « Fantastic Jobs et La Bonne Alternance sont interrogés simultanément. La fenêtre Fantastic Jobs est réglée sur 24 heures pour correspondre à la recherche quotidienne, avec un maximum de 50 résultats demandés. Les branches rejoignent le même point de fusion, où l’on pourra raccorder d’autres sources. »
+4. **Résilience et alertes** — « Une erreur ou un quota dépassé chez Fantastic Jobs ne bloque pas les résultats de La Bonne Alternance. Une alerte détaille les réponses de chaque source si l’une échoue ou si aucune offre n’est reçue. D’autres alertes expliquent l’absence de critères, l’absence de correspondance ou l’absence de nouvelle offre. »
+5. **Filtrage et contacts** — « Après normalisation, le workflow garde uniquement les offres qui correspondent à au moins un mot-clé ou secteur, puis écarte celles déjà enregistrées. Il recherche une adresse de contact publiée par l’entreprise ; s’il n’en trouve pas, il ne l’invente pas. »
+6. **Analyse et brouillons** — « Gemini évalue chaque nouvelle offre correspondante par rapport au CV. Il peut recommander de passer une offre ; celles retenues produisent un brouillon Gmail et une ligne de suivi. Le nombre d’offres n’est plus plafonné artificiellement ; le volume d’appels Gemini dépend donc des offres filtrées. »
 
 ## Conclusion
 
@@ -20,7 +20,8 @@
 ## Plans de capture suggérés
 
 - Vue d’ensemble du workflow, puis zoom sur les deux branches de recherche et leur nœud de fusion.
-- Nœud Settings et les critères de recherche.
+- Formulaire de préférences et réglages persistés.
 - Branche de création du profil à partir du CV.
-- Branche de sélection, comparaison avec Gemini et création du brouillon Gmail.
+- Branche de filtrage, recherche de contact, comparaison avec Gemini et création du brouillon Gmail.
+- Alertes de source défaillante, de quota atteint et d’absence de nouvelles offres.
 - Tableur de suivi et exemple de brouillon, en masquant les données personnelles.

@@ -26,42 +26,34 @@ Chaque prompt suit le format XML imposé : `<role>`, `<instructions>` (`<goal>`,
 
 **Hors périmètre** : envoi automatique, création du brouillon dans Gmail, relances, détection des réponses, multi-utilisateurs.
 
-## Workflow automatique (version 1.1)
+## Workflow automatique (version 1.2)
 
-**`Alternance Tracker Auto`** : 26 nœuds, regroupés en 4 blocs visuels ; aucun formulaire à remplir à chaque exécution.
-Identifiant n8n : `famUstqu1tAcM0Lf`.
-Export importable : `Workflow/Alternance Tracker Auto.workflow.ts` (format workflow-as-code n8n).
-
-Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workflows alimentent un seul suivi.
+Alternance Tracker Auto contient 40 nœuds opérationnels répartis en 6 blocs visuels. Il garde deux déclencheurs indépendants : une recherche quotidienne à 08:00 et un formulaire de préférences qu’on peut soumettre quand on le souhaite.
 
 | Étape | Rôle |
 |---|---|
-| `Daily Trigger` | Schedule Trigger, une fois par jour à 08:00 |
-| `Settings` | Critères de recherche et identifiants, à régler une seule fois |
-| `CV profile` | Cherche le CV dans le dossier Drive, prend le PDF en priorité, l'envoie à Gemini et enregistre le profil (1 appel LLM) |
-| `Offer harvesting` | Interroge fantastic.jobs (`/v1/active-ats`) et La bonne alternance (`/api/job/v1/search`) en parallèle, fusionne les résultats, écarte les offres déjà connues, plafonne à `maxOffers` et alerte en cas d’échec ou d’absence d’offre exploitable |
-| `Draft preparation` | Note chaque offre et prépare un brouillon Gmail à relire et envoyer manuellement (1 appel LLM par offre) |
+| Daily Trigger | Lance la recherche une fois par jour |
+| Formulaire Mes critères d’alternance | Enregistre les mots-clés, les secteurs et, si joint, un CV PDF |
+| Préférences persistées | Le formulaire n’est pas demandé pendant les exécutions quotidiennes ; les critères et le dernier CV sont conservés dans Configuration |
+| Profil CV | Utilise le dernier CV importé dans Drive, sinon le CV du dossier configuré, puis actualise le profil Gemini |
+| Sources et filtrage | Interroge Fantastic Jobs et La bonne alternance en parallèle, normalise les réponses, puis garde les offres qui mentionnent au moins un mot-clé ou secteur dans le titre, l’entreprise, la description ou le lieu |
+| Déduplication | Écarte les offres déjà enregistrées |
+| Contact public | Utilise l’adresse fournie par la source ou recherche une adresse publiée sur le site de l’entreprise ; aucune adresse n’est devinée |
+| Brouillons | Évalue chaque offre nouvelle qui correspond aux critères et prépare un brouillon Gmail seulement si Gemini recommande apply ou consider |
 
-| Paramètre (`Settings`) | Rôle |
-|---|---|
-| `keywords` | Mots-clés d'alternance (`alternance,apprentissage`) : un titre ou une description fantastic.jobs doit en contenir un |
-| `location` | Zone de recherche en nom complet (`Toulouse, Occitanie, France`) ; le pays sert à écarter les offres fantastic.jobs hors zone |
-| `latitude`, `longitude` | Centre de la recherche La bonne alternance (Toulouse : `43.6047`, `1.4442`) |
-| `radius` | Rayon en kilomètres autour de ce centre |
-| `targetDiplomaLevel` | Niveau de diplôme visé par La bonne alternance (`5` = bac+2) |
-| `timeFrame` | Fenêtre de fantastic.jobs : `7d` par défaut, `24h` pour un passage quotidien |
-| `maxFetch` | Nombre d'offres demandées à fantastic.jobs par exécution |
-| `maxOffers` | Nombre maximum d'offres traitées par jour, donc plafond du coût LLM |
-| `maxDaysOld` | Ancienneté maximale des offres fantastic.jobs ; La bonne alternance ne renvoie que des offres actives |
-| `cvFolderId` | Dossier Google Drive du CV ; facultatif, sinon recherche par nom |
-| `spreadsheetId`, `userId` | Tableur cible et identifiant de profil |
+Le formulaire est accessible dans le nœud Search Preferences Form. Son chemin local de production est /form/alternance-tracker-preferences. Les champs de critères sont facultatifs : laisser les deux vides conserve les valeurs enregistrées ; saisir au moins un des deux remplace la liste enregistrée, un champ laissé vide est alors effacé. Le CV PDF est toujours facultatif et n’est envoyé dans Drive qu’au moment où il est joint au formulaire.
 
-**Deux sources, un seul flux.** Les offres fantastic.jobs sont gardées si elles citent un mot-clé de `keywords` et se situent dans le pays de `location` ; La bonne alternance ne renvoie que des offres d'alternance actives, donc elles sont toutes conservées. Les doublons sont retirés sur `external_id`, puis les deux sources sont entrelacées, la plus récente de chacune d'abord, pour que `maxOffers` ne consomme jamais tout le budget sur une seule plateforme.
+Les critères sont appliqués après la récupération des offres, avant les appels Gemini. Une offre doit contenir au moins un terme saisi ; si plusieurs termes sont renseignés, la correspondance fonctionne en OU. Éviter les termes génériques comme alternance ou apprentissage, présents dans presque toutes les offres LBA. Le plafond maxOffers a été supprimé : chaque nouvelle offre correspondant aux critères passe à l’analyse, puis Gemini peut encore la refuser selon le CV. Le coût Gemini dépend donc du nombre d’offres correspondantes.
 
-**Coût** : 1 appel Gemini pour le CV + 1 appel par nouvelle offre, jamais plus de `maxOffers` par jour.
+Fantastic Jobs est interrogé avec `time_frame = 24h`, aligné sur le déclenchement quotidien à 08:00, et `maxFetch = 50`. Cette fenêtre évite de repayer chaque jour les mêmes offres de la fenêtre `7d`. Si Fantastic Jobs répond par une erreur de quota (HTTP 429) ou une erreur réseau, le workflow continue avec La bonne alternance et envoie une alerte de recherche dégradée ; le quota Fantastic Jobs doit toutefois être renouvelé ou augmenté pour réactiver cette source. Les deux sources restent indépendantes et tous leurs résultats exploitables sont normalisés avant le filtrage candidat.
 
-**Sans adresse destinataire**, le brouillon est tout de même créé : `draft_to` vaut `A COMPLETER`, l'avertissement est consigné et la référence `APP-xxxxxxxx` reste dans l'objet. Le workflow n'envoie rien.
+Les lectures de paramètres partagés utilisent le premier élément du nœud `Settings` pour chaque offre. Cela évite l’erreur de liaison « Settings node has 1 item(s) but you're trying to access item 1 » lorsque plusieurs offres sont traitées.
 
+### Tests du parcours
+
+Cinq exécutions de test n8n avec données épinglées ont terminé en succès : parcours normal, quota Fantastic Jobs avec repli sur La bonne alternance, erreur des deux sources, aucune offre reçue, et critères de recherche absents. Les réponses des API, de Drive, Gemini, Sheets et Gmail étaient simulées ; ces essais vérifient les chemins du workflow sans valider les identifiants réels ni créer d’écritures ou de brouillons.
+
+Pour les emails, le workflow ne devine jamais de destinataire. Une adresse publique trouvée sur le site officiel est privilégiée après celle fournie directement par la source. Si aucune adresse n’est publiée, le brouillon reste sans destinataire et porte l’instruction de le compléter manuellement. Aucune candidature n’est envoyée automatiquement.
 ### Prérequis propres à ce workflow
 
 1. **Google Drive** : credential OAuth2 `CV_folder`, autorisé sur le compte qui contient le CV. S'il échoue en `invalid_client`, le client OAuth ou son jeton n'est plus accepté par Google : rouvrir le credential et le reconnecter.
