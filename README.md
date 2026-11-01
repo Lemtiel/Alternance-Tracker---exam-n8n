@@ -28,7 +28,7 @@ Chaque prompt suit le format XML imposé : `<role>`, `<instructions>` (`<goal>`,
 
 ## Workflow automatique (version 1.1)
 
-**`Alternance Tracker Auto`** : 18 nœuds, aucun formulaire à remplir à chaque exécution.
+**`Alternance Tracker Auto`** : 26 nœuds, regroupés en 4 blocs visuels ; aucun formulaire à remplir à chaque exécution.
 Identifiant n8n : `famUstqu1tAcM0Lf`.
 Export importable : `Workflow/Alternance Tracker Auto.workflow.ts` (format workflow-as-code n8n).
 
@@ -39,8 +39,8 @@ Il réutilise le même tableur et les mêmes onglets que le MVP : les deux workf
 | `Daily Trigger` | Schedule Trigger, une fois par jour à 08:00 |
 | `Settings` | Critères de recherche et identifiants, à régler une seule fois |
 | `CV profile` | Cherche le CV dans le dossier Drive, prend le PDF en priorité, l'envoie à Gemini et enregistre le profil (1 appel LLM) |
-| `Offer harvesting` | Interroge fantastic.jobs (`/v1/active-ats`) puis La bonne alternance (`/api/job/v1/search`), normalise et fusionne les deux flux, écarte les offres déjà connues, plafonne à `maxOffers` |
-| `Draft preparation` | Note chaque offre et écrit un brouillon d'e-mail par offre (1 appel LLM par offre) |
+| `Offer harvesting` | Interroge fantastic.jobs (`/v1/active-ats`) et La bonne alternance (`/api/job/v1/search`) en parallèle, fusionne les résultats, écarte les offres déjà connues, plafonne à `maxOffers` et alerte en cas d’échec ou d’absence d’offre exploitable |
+| `Draft preparation` | Note chaque offre et prépare un brouillon Gmail à relire et envoyer manuellement (1 appel LLM par offre) |
 
 | Paramètre (`Settings`) | Rôle |
 |---|---|
@@ -139,3 +139,4 @@ Les exécutions 35 et 36 ont validé la lecture réelle du CV dans Drive, l'extr
 | Offre fantastic.jobs hors sujet (autre pays, sans mot-clé) | écartée par `keywords` et le pays de `location` |
 
 La validation statique des deux workflows (schéma n8n et lint) est passée sans erreur.
+
