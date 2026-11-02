@@ -2,7 +2,7 @@
 
 ## Présentation générale
 
-Alternance Tracker Auto est un workflow n8n nommé `famUstqu1tAcM0Lf`. Il organise une veille quotidienne d’offres d’alternance, réutilise les critères et le profil du candidat, collecte les annonces depuis deux sources, les filtre, recherche des coordonnées publiées et prépare des brouillons dans Gmail. Les candidatures ne sont jamais envoyées automatiquement.
+Alternance Tracker Auto est un workflow n8n. Il organise une veille quotidienne d’offres d’alternance, réutilise les critères et le profil du candidat, collecte les annonces depuis deux sources, les filtre, recherche des coordonnées publiées et prépare des brouillons dans Gmail. Les candidatures ne sont jamais envoyées automatiquement.
 
 Le scénario comporte quatre groupes d’actions : `Bloc 1 - Recherche et profil`, `Bloc 2 - Sources d’offres`, `Bloc 3 - Filtrage et contacts` et `Bloc 4 - Analyse et brouillons`. Le formulaire de préférences et la branche d’alerte sont présentés dans des zones dédiées du canevas. Les nœuds de connexion aux services portent les accès OAuth ou API ; les nœuds Code harmonisent et contrôlent les données qui circulent entre ces services.
 
